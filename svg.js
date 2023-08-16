@@ -4,6 +4,7 @@ const createRenderer = require('./lib/renderer')
 const createPlugin = require('./lib/core')
 
 module.exports = createPlugin('rehypeMathJaxSvg', renderSvg)
+module.exports.renderSvg = renderSvg
 
 function renderSvg(inputOptions, outputOptions) {
   return createRenderer(createInput(inputOptions), createOutput(outputOptions))
