@@ -1,232 +1,266 @@
-const path = require('path')
-const test = require('tape')
-const vfile = require('to-vfile')
-const unified = require('unified')
-const parseMarkdown = require('remark-parse')
-const remark2rehype = require('remark-rehype')
-const parseHtml = require('rehype-parse')
-const stringify = require('rehype-stringify')
-const math = require('../../remark-math')
-const svg = require('..')
-const chtml = require('../chtml')
-const browser = require('../browser')
+import assert from 'node:assert/strict'
+import fs from 'node:fs/promises'
+import test from 'node:test'
+import rehypeMathJaxBrowser from 'rehype-mathjax/browser'
+import rehypeMathJaxChtml from 'rehype-mathjax/chtml'
+import rehypeMathJaxSvg from 'rehype-mathjax/svg'
+import rehypeParse from 'rehype-parse'
+import rehypeStringify from 'rehype-stringify'
+import remarkMath from 'remark-math'
+import remarkParse from 'remark-parse'
+import remarkRehype from 'remark-rehype'
+import {unified} from 'unified'
 
-const fixtures = path.join(__dirname, 'fixture')
+const base = new URL('fixture/', import.meta.url)
 
-test('rehype-mathjax', function (t) {
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(svg)
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'small.html'}))
-      .toString(),
-    String(
-      vfile.readSync({dirname: fixtures, basename: 'small-svg.html'})
-    ).trim(),
-    'should render SVG'
+test('rehype-mathjax', async function (t) {
+  await t.test(
+    'should expose the public api for `rehype-mathjax`',
+    async function () {
+      assert.deepEqual(Object.keys(await import('rehype-mathjax')).sort(), [
+        'default'
+      ])
+    }
   )
 
-  t.throws(
-    function () {
-      unified().use(chtml).freeze()
-    },
-    /rehype-mathjax: missing `fontURL` in options/,
-    'should crash for CHTML w/o `fontURL`'
-  )
-
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(chtml, {fontURL: 'place/to/fonts'})
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'small.html'}))
-      .toString(),
-    String(
-      vfile.readSync({dirname: fixtures, basename: 'small-chtml.html'})
-    ).trim(),
-    'should render CHTML'
-  )
-
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(browser)
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'small.html'}))
-      .toString(),
-    String(vfile.readSync({dirname: fixtures, basename: 'small-browser.html'})),
-    'should render browser'
-  )
-
-  t.equal(
-    unified()
-      .use(parseMarkdown)
-      .use(math)
-      .use(remark2rehype)
-      .use(svg)
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'markdown.md'}))
-      .toString(),
-    String(
-      vfile.readSync({dirname: fixtures, basename: 'markdown-svg.html'})
-    ).trim(),
-    'should integrate with `remark-math`'
-  )
-
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(svg)
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'double.html'}))
-      .toString(),
-    String(
-      vfile.readSync({dirname: fixtures, basename: 'double-svg.html'})
-    ).trim(),
-    'should transform `.math-inline.math-display`'
-  )
-
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(svg)
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'none.html'}))
-      .toString(),
-    String(vfile.readSync({dirname: fixtures, basename: 'none-svg.html'})),
-    'should transform documents without math'
-  )
-
-  t.equal(
-    unified()
-      .use(parseHtml)
-      .use(svg)
-      .use(stringify)
-      .processSync(
-        vfile.readSync({dirname: fixtures, basename: 'document.html'})
+  await t.test(
+    'should expose the public api for `rehype-mathjax/browser`',
+    async function () {
+      assert.deepEqual(
+        Object.keys(await import('rehype-mathjax/browser')).sort(),
+        ['default']
       )
-      .toString(),
-    String(
-      vfile.readSync({dirname: fixtures, basename: 'document-svg.html'})
-    ).trim(),
-    'should transform complete documents'
+    }
   )
 
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(browser, {inlineMath: ['$', '$'], displayMath: ['$$', '$$']})
-      .use(stringify)
-      .processSync(vfile.readSync({dirname: fixtures, basename: 'small.html'}))
-      .toString(),
-    String(
-      vfile.readSync({
-        dirname: fixtures,
-        basename: 'small-browser-delimiters.html'
-      })
-    ),
-    'should support custom `inlineMath` and `displayMath` delimiters for browser'
-  )
-
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(svg, {tex: {tags: 'ams'}})
-      .use(stringify)
-      .processSync(
-        vfile.readSync({
-          dirname: fixtures,
-          basename: 'equation-numbering-1.html'
-        })
+  await t.test(
+    'should expose the public api for `rehype-mathjax/chtml`',
+    async function () {
+      assert.deepEqual(
+        Object.keys(await import('rehype-mathjax/chtml')).sort(),
+        ['default']
       )
-      .toString(),
-    String(
-      vfile.readSync({
-        dirname: fixtures,
-        basename: 'equation-numbering-1-svg.html'
-      })
-    ).trim(),
-    'should render SVG with equation numbers'
+    }
   )
 
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(svg, {tex: {tags: 'ams'}})
-      .use(stringify)
-      .processSync(
-        vfile.readSync({
-          dirname: fixtures,
-          basename: 'equation-numbering-2.html'
-        })
-      )
-      .toString(),
-    String(
-      vfile.readSync({
-        dirname: fixtures,
-        basename: 'equation-numbering-2-svg.html'
-      })
-    ).trim(),
-    'should render SVG with reference to an undefined equation'
+  await t.test(
+    'should expose the public api for `rehype-mathjax/svg`',
+    async function () {
+      assert.deepEqual(Object.keys(await import('rehype-mathjax/svg')).sort(), [
+        'default'
+      ])
+    }
   )
 
-  t.equal(
-    unified()
-      .use(parseHtml, {fragment: true})
-      .use(chtml, {fontURL: 'place/to/fonts', tex: {tags: 'ams'}})
-      .use(stringify)
-      .processSync(
-        vfile.readSync({
-          dirname: fixtures,
-          basename: 'equation-numbering-1.html'
-        })
-      )
-      .toString(),
-    String(
-      vfile.readSync({
-        dirname: fixtures,
-        basename: 'equation-numbering-1-chtml.html'
-      })
-    ).trim(),
-    'should render CHTML with equation numbers'
-  )
+  await t.test('should render SVG', async function () {
+    assert.equal(
+      String(
+        await unified()
+          .use(rehypeParse, {fragment: true})
+          .use(rehypeMathJaxSvg)
+          .use(rehypeStringify)
+          .process(await fs.readFile(new URL('small.html', base)))
+      ),
+      String(await fs.readFile(new URL('small-svg.html', base))).trim()
+    )
+  })
 
-  t.equal(
-    (() => {
-      const processor = unified()
-        .use(parseHtml, {fragment: true})
-        .use(svg, {tex: {tags: 'ams'}})
-        .use(stringify)
-      return ['equation-numbering-1.html', 'equation-numbering-2.html']
-        .map((basename) =>
-          processor
-            .processSync(
-              vfile.readSync({
-                dirname: fixtures,
-                basename: basename
-              })
-            )
-            .toString()
+  await t.test('should crash for CHTML w/o `fontURL`', async function () {
+    try {
+      await unified()
+        .use(rehypeParse, {fragment: true})
+        .use(rehypeMathJaxChtml)
+        .use(rehypeStringify)
+        .process(
+          await fs.readFile(new URL('equation-numbering-2-svg.html', base))
         )
-        .join('')
-    })(),
-    [
+      assert.fail()
+    } catch (error) {
+      assert.match(
+        String(error),
+        /rehype-mathjax: missing `fontURL` in options/
+      )
+    }
+  })
+
+  await t.test('should render CHTML', async function () {
+    assert.equal(
       String(
-        vfile.readSync({
-          dirname: fixtures,
-          basename: 'equation-numbering-1-svg.html'
-        })
-      ).trim(),
+        await unified()
+          .use(rehypeParse, {fragment: true})
+          .use(rehypeMathJaxChtml, {chtml: {fontURL: 'place/to/fonts'}})
+          .use(rehypeStringify)
+          .process(await fs.readFile(new URL('small.html', base)))
+      ),
+      String(await fs.readFile(new URL('small-chtml.html', base))).trim()
+    )
+  })
+
+  await t.test('should render browser', async function () {
+    assert.equal(
       String(
-        vfile.readSync({
-          dirname: fixtures,
-          basename: 'equation-numbering-2-svg.html'
-        })
+        await unified()
+          .use(rehypeParse, {fragment: true})
+          .use(rehypeMathJaxBrowser)
+          .use(rehypeStringify)
+          .process(await fs.readFile(new URL('small.html', base)))
+      ),
+      String(await fs.readFile(new URL('small-browser.html', base)))
+    )
+  })
+
+  await t.test('should support markdown fenced code', async function () {
+    assert.deepEqual(
+      String(
+        await unified()
+          .use(remarkParse)
+          // @ts-expect-error: to do: remove when `remark-rehype` is released.
+          .use(remarkRehype)
+          .use(rehypeMathJaxSvg)
+          .use(rehypeStringify)
+          .process('```math\n\\gamma\n```')
+      ),
+      String(
+        await fs.readFile(new URL('markdown-code-fenced-svg.html', base))
       ).trim()
-    ].join(''),
-    'should render SVG with equation numbers'
+    )
+  })
+
+  await t.test('should integrate with `remark-math`', async function () {
+    assert.equal(
+      String(
+        await unified()
+          .use(remarkParse)
+          .use(remarkMath)
+          // @ts-expect-error: to do: remove when `remark-rehype` is released.
+          .use(remarkRehype)
+          .use(rehypeMathJaxSvg)
+          .use(rehypeStringify)
+          .process(await fs.readFile(new URL('markdown.md', base)))
+      ),
+      String(await fs.readFile(new URL('markdown-svg.html', base))).trim()
+    )
+  })
+
+  await t.test(
+    'should transform `.math-inline.math-display`',
+    async function () {
+      assert.equal(
+        String(
+          await unified()
+            .use(rehypeParse, {fragment: true})
+            .use(rehypeMathJaxSvg)
+            .use(rehypeStringify)
+            .process(await fs.readFile(new URL('double.html', base)))
+        ),
+        String(await fs.readFile(new URL('double-svg.html', base))).trim()
+      )
+    }
   )
 
-  t.end()
+  await t.test('should transform documents without math', async function () {
+    assert.equal(
+      String(
+        await unified()
+          .use(rehypeParse, {fragment: true})
+          .use(rehypeMathJaxSvg)
+          .use(rehypeStringify)
+          .process(await fs.readFile(new URL('none.html', base)))
+      ),
+      String(await fs.readFile(new URL('none-svg.html', base)))
+    )
+  })
+
+  await t.test('should transform complete documents', async function () {
+    assert.equal(
+      String(
+        await unified()
+          .use(rehypeParse)
+          .use(rehypeMathJaxSvg)
+          .use(rehypeStringify)
+          .process(await fs.readFile(new URL('document.html', base)))
+      ),
+      String(await fs.readFile(new URL('document-svg.html', base))).trim()
+    )
+  })
+
+  await t.test(
+    'should support custom `inlineMath` and `displayMath` delimiters for browser',
+    async function () {
+      assert.equal(
+        String(
+          await unified()
+            .use(rehypeParse, {fragment: true})
+            .use(rehypeMathJaxBrowser, {
+              tex: {
+                displayMath: [['$$', '$$']],
+                inlineMath: [['$', '$']]
+              }
+            })
+            .use(rehypeStringify)
+            .process(await fs.readFile(new URL('small.html', base)))
+        ),
+        String(
+          await fs.readFile(new URL('small-browser-delimiters.html', base))
+        )
+      )
+    }
+  )
+
+  await t.test('should render SVG with equation numbers', async function () {
+    assert.equal(
+      String(
+        await unified()
+          .use(rehypeParse, {fragment: true})
+          .use(rehypeMathJaxSvg, {tex: {tags: 'ams'}})
+          .use(rehypeStringify)
+          .process(
+            await fs.readFile(new URL('equation-numbering-1.html', base))
+          )
+      ),
+      String(
+        await fs.readFile(new URL('equation-numbering-1-svg.html', base))
+      ).trim()
+    )
+  })
+
+  await t.test(
+    'should render SVG with reference to an undefined equation',
+    async function () {
+      assert.equal(
+        String(
+          await unified()
+            .use(rehypeParse, {fragment: true})
+            .use(rehypeMathJaxSvg, {tex: {tags: 'ams'}})
+            .use(rehypeStringify)
+            .process(
+              await fs.readFile(new URL('equation-numbering-2.html', base))
+            )
+        ),
+        String(
+          await fs.readFile(new URL('equation-numbering-2-svg.html', base))
+        ).trim()
+      )
+    }
+  )
+
+  await t.test('should render CHTML with equation numbers', async function () {
+    assert.equal(
+      String(
+        await unified()
+          .use(rehypeParse, {fragment: true})
+          .use(rehypeMathJaxChtml, {
+            chtml: {fontURL: 'place/to/fonts'},
+            tex: {tags: 'ams'}
+          })
+          .use(rehypeStringify)
+          .process(
+            await fs.readFile(new URL('equation-numbering-1.html', base))
+          )
+      ),
+      String(
+        await fs.readFile(new URL('equation-numbering-1-chtml.html', base))
+      ).trim()
+    )
+  })
 })
